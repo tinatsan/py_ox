@@ -36,6 +36,7 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
         volume_unit="liter",
         concentration_unit="mol/kg",
         isotopes=False,
+        ideal_water=False,
         # step_limit=5e5,
     )
 
