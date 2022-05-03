@@ -1,4 +1,5 @@
 # Import this code into a model setup script. See e.g., readsignal2.py
+import sys
 def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0):
     from esbmtk import (
         Model,
@@ -158,8 +159,8 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
 
     surface_boxes: list = [M1.L_b, M1.H_b]
     deep_boxes: list = [M1.D_b]
-    print(M1.flux_summary())
     ef = M1.flux_summary(filter_by="PIC_DIC", return_list=True)
+    return M1
     print("ef is")
     print(ef)
 
@@ -296,7 +297,7 @@ if __name__ == "__main__":
     dic = M1.D_b.DIC.m[-2] + M1.H_b.DIC.m[-2] + M1.L_b.DIC.m[-2]
     ta = M1.D_b.TA.m[-2] + M1.H_b.TA.m[-2] + M1.L_b.TA.m[-2]
     print(f"ta/dic = {ta/dic}, ta = {ta:.2e}, dic = {dic:.2e}")
-
+    sys.exit()
     M1.run(solver="numba")
     # M1.run()
     # M1.save_state()
