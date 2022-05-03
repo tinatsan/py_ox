@@ -1,5 +1,4 @@
 # Import this code into a model setup script. See e.g., readsignal2.py
-import sys
 def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0):
     from esbmtk import (
         Model,
@@ -159,16 +158,14 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
 
     surface_boxes: list = [M1.L_b, M1.H_b]
     deep_boxes: list = [M1.D_b]
+
     ef = M1.flux_summary(filter_by="PIC_DIC", return_list=True)
-    return M1
-    print("ef is")
-    print(ef)
 
     add_carbonate_system_1(surface_boxes)
 
     add_carbonate_system_2(
         rgs=deep_boxes,  # list of reservoir groups
-        carbonate_export_fluxes=ef[1],  # list of fluxes
+        carbonate_export_fluxes=ef,  # list of fluxes
         zsat_min=-200,  # zsat_max
         z0=-200,
         alpha=alpha,
@@ -192,6 +189,7 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
         piston_velocity="4.8 m/d",
         water_vapor_pressure=M1.H_b.swc.p_H2O,
         id="gex_hb",
+        register=M1,
     )
 
     AirSeaExchange(
@@ -204,6 +202,7 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
         piston_velocity="4.8 m/d",
         water_vapor_pressure=M1.L_b.swc.p_H2O,
         id="gex_lb",
+        register=M1,
     )
 
     # -------------------- Sources and Signals -------------------------
@@ -216,6 +215,7 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
         name="volcanic",
         rate="5 / 17 * 1e13 mol/yr",
         id="volcanic_flux",
+        register=M1,
     )
 
     # CaCO3 weathering DIC Land to Ocean DIC
@@ -229,6 +229,7 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
         ex=0.4,
         pco2_0="280 ppm",
         rate="12 / 17 * 1e13 mol/yr",  # ~70% of total flux
+        register=M1,
     )
 
     # CaSiO3 weathering Atmosphere to Ocean DIC
@@ -242,21 +243,20 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
         ex=0.2,
         pco2_0="280 ppm",
         rate="5 / 17 * 1e13 mol/yr",  # ~30% of total flux
+        register=M1,
     )
 
     # CaCO3 weathering Land to Ocean ALK
     wf = M1.flux_summary(filter_by="Ca_W", return_list=True)
 
-    print(wf)
-    print(M1.flux_summary())
-
     Connect(
         source=M1.Fw.TA,
         sink=M1.L_b.TA,
         ctype="scale_with_flux",
-        ref_flux=wf[1],
+        ref_flux=wf[0],
         id="wca_ta",
         scale=2,
+        register=M1,
     )
 
     # CaSiO3 weathering Land to Ocean ALK
@@ -266,9 +266,10 @@ def initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta=0, dic=0)
         source=M1.Fw.TA,
         sink=M1.L_b.TA,
         ctype="scale_with_flux",
-        ref_flux=wf[1],
+        ref_flux=wf[0],
         id="wsi_ta",
         scale=2,
+        register=M1,
     )
 
     return M1
@@ -297,16 +298,16 @@ if __name__ == "__main__":
     dic = M1.D_b.DIC.m[-2] + M1.H_b.DIC.m[-2] + M1.L_b.DIC.m[-2]
     ta = M1.D_b.TA.m[-2] + M1.H_b.TA.m[-2] + M1.L_b.TA.m[-2]
     print(f"ta/dic = {ta/dic}, ta = {ta:.2e}, dic = {dic:.2e}")
-    sys.exit()
+
     M1.run(solver="numba")
     # M1.run()
     # M1.save_state()
 
-    dic_caw = M1.C_DIC_2_DIC_Ca_W.DIC_2_DIC_Ca_W_F.fa[0]
-    dic_siw = M1.C_CO2_At_2_DIC_Si_W.CO2_At_2_DIC_Si_W_F.fa[0]
+    dic_caw = M1.Ca_W._F.fa[0]
+    dic_siw = M1.Si_W._F.fa[0]
 
-    ta_caw = M1.C_TA_2_TA_wca_ta.TA_2_TA_wca_ta_F.fa[0]
-    ta_siw = M1.C_TA_2_TA_wsi_ta.TA_2_TA_wsi_ta_F.fa[0]
+    ta_caw = M1.wca_ta._F.fa[0]
+    ta_siw = M1.wsi_ta._F.fa[0]
     # ra_siw = M1.L_b.TA
     print(f"DIC from Carbonate Weathering = {dic_caw:.2e}")
     print(f"DIC from Silicate Weathering = {dic_siw:.2e}")
@@ -315,6 +316,8 @@ if __name__ == "__main__":
     print(f"TA from Carbonate Weathering = {ta_caw:.2e}")
     print(f"TA from Silicate Weathering = {ta_siw:.2e}")
     print(f"Total TA flux : {(ta_caw+ta_siw):.2e}\n")
+
+    # ==========================================================================
 
     # dic_w = (M1.Caw.DIC_2_DIC_F.m[3] + M1.Siw.CO2_At_2_DIC_F.m[3])/1e12
     # ta_w =  (M1.TA.TA_2_TA_wca_ta_F.m[3] + M1.wsi_ta.TA_2_TA_F.m[3])/1e12
