@@ -1,6 +1,7 @@
 import boudreau_2010 as bd
 from esbmtk import Source, Signal, Connect, DataField, ExternalData
 import numpy as np
+import sys
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -23,8 +24,7 @@ ta: float = sum_ta / total_vol
 
 M1 = bd.initialize_esbmtk_model(rain_ratio, alpha, run_time, time_step, ta, dic)
 
-
-M1.Carbon_Pulse = Source(name="Carbon_Pulse", species=M1.CO2)
+M1.Carbon_Pulse = Source(name="Carbon_Pulse", species=M1.CO2, register=M1)
 
 # #-------------------------------SCENARIO 1------------------------------------
 # # 2CaCO3 + H2SO4 → 2Ca2+ + SO42- + 2HCO3-
@@ -34,6 +34,7 @@ M1.Carbon_Pulse = Source(name="Carbon_Pulse", species=M1.CO2)
 #                species=M1.CO2,  # species
 #                filename="koelling_model_200kyr.csv", # spreadsheet data is PYRITE OXIDATION flux
 #                scale=4, # 1 mol FeS2 contributes 4 mol DIC
+#                register=M1,
 #                )
 #
 # Connect(
@@ -41,16 +42,17 @@ M1.Carbon_Pulse = Source(name="Carbon_Pulse", species=M1.CO2)
 #     sink=M1.L_b.DIC,
 #     rate="0 mol/yr",
 #     signal=M1.PyOx,  # list of processes
-#     id="PyOx_DIC"
+#     id="PyOx_DIC",
+#     register=M1,
 # )
 #
 # Connect(
 #     source=M1.Fw.TA,
 #     sink=M1.L_b.TA,
-#     ctype="scale_with_flux",
-#     ref_reservoirs=M1.C_DIC_2_DIC_PyOx_DIC.DIC_2_DIC_PyOx_DIC_F, # this is the flux name
-#     scale=1, # 1 mol FeS2 -> 2 mol CO2, 1 mol FeS2 -> 4 mol TA (note: Signal was already scaled by 2)
-#     id="PyOx_TA",  # set a new id, e..g. PyOx_TA
+#     rate="0 mol/yr",
+#     signal=M1.PyOx,  # list of processes
+#     id="PyOx_TA",
+#     register=M1,
 # )
 
 # #-------------------------------SCENARIO 2------------------------------------
@@ -64,6 +66,7 @@ M1.Carbon_Pulse = Source(name="Carbon_Pulse", species=M1.CO2)
 #                species=M1.CO2,  # species
 #                filename="koelling_model_200kyr.csv", # spreadsheet data is PYRITE OXIDATION flux
 #                scale=2, # 1 mol FeS2 contributes 2 mol DIC
+#                register=M1,
 #                )
 #
 # Connect(
@@ -71,35 +74,38 @@ M1.Carbon_Pulse = Source(name="Carbon_Pulse", species=M1.CO2)
 #     sink=M1.L_b.DIC,
 #     rate="0 mol/yr",
 #     signal=M1.PyOx,  # list of processes
-#     id="PyOx_DIC"
+#     id="PyOx_DIC",
+#     register = M1,
 # )
 
-#-------------------------------SCENARIO 3------------------------------------
-# FeS2 + 14Fe3+ + 8H2O → 15Fe2+ + 2SO42- + 16H+
-# Contributes -4 mol TA
-
-# NOTE: Comment out the appropriate lines (do not need to plot DIC) if using the Matplotlib plots!
-# See plot 'DIC/TA FLUX DATA'
-
-M1.PyOx = Signal(name="PyOx",  # name of signal
-               species=M1.CO2,  # species
-               filename="koelling_model_200kyr.csv", # spreadsheet data is PYRITE OXIDATION flux
-               scale=-4, # 1 mol FeS2 decreases TA by 4 mol
-               )
-
-Connect(
-    source=M1.Fw.TA,
-    sink=M1.L_b.TA,
-    rate="0 mol/yr",
-    signal=M1.PyOx,  # list of processes
-    id="PyOx_TA"
-)
+# #-------------------------------SCENARIO 3------------------------------------
+# # FeS2 + 14Fe3+ + 8H2O → 15Fe2+ + 2SO42- + 16H+
+# # Contributes -4 mol TA
+#
+# # NOTE: Comment out the appropriate lines (do not need to plot DIC) if using the Matplotlib plots!
+# # See plot 'DIC/TA FLUX DATA'
+#
+# M1.PyOx = Signal(name="PyOx",  # name of signal
+#                species=M1.CO2,  # species
+#                filename="koelling_model_200kyr.csv", # spreadsheet data is PYRITE OXIDATION flux
+#                scale=-4, # 1 mol FeS2 decreases TA by 4 mol
+#                register=M1,
+#                )
+#
+# Connect(
+#     source=M1.Fw.TA,
+#     sink=M1.L_b.TA,
+#     rate="0 mol/yr",
+#     signal=M1.PyOx,  # list of processes
+#     id="PyOx_TA",
+#     register=M1,
+# )
 
 M1.read_state()
 M1.run(solver="numba")
 #M1.save_state()
 #M1.sub_sample_data()
-M1.save_data()
+#M1.save_data()
 
 #-------------------------------------------------------------------------------
 fig, axs = plt.subplots(2, 3, figsize=(13,7))
